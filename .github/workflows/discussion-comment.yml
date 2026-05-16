@@ -1,0 +1,86 @@
+name: Discussion comment
+
+on:
+  discussion_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  discussions: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - id: command
+        uses: knowledge-work/command-action@v2
+        with:
+          command: 'test'
+
+      - name: Echo outputs
+        if: ${{ steps.command.outputs.continue == 'true' }}
+        env:
+          OUT_CONTINUE: ${{ steps.command.outputs.continue }}
+          OUT_CONTEXT: ${{ steps.command.outputs.context }}
+          OUT_COMMAND: ${{ steps.command.outputs.command }}
+          OUT_NUMBER: ${{ steps.command.outputs.number }}
+          OUT_COMMENT_ID: ${{ steps.command.outputs.comment_id }}
+          OUT_ACTOR: ${{ steps.command.outputs.actor }}
+          OUT_PARAMS: ${{ steps.command.outputs.params }}
+        run: |
+          echo "continue=$OUT_CONTINUE"
+          echo "context=$OUT_CONTEXT"
+          echo "command=$OUT_COMMAND"
+          echo "number=$OUT_NUMBER"
+          echo "comment_id=$OUT_COMMENT_ID"
+          echo "actor=$OUT_ACTOR"
+          echo "params=$OUT_PARAMS"
+
+      - name: Add eyes reaction
+        if: ${{ steps.command.outputs.continue == 'true' }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const subjectId = context.payload.comment.node_id;
+            await github.graphql(
+              `mutation($subjectId: ID!) {
+                addReaction(input: { subjectId: $subjectId, content: EYES }) {
+                  reaction { content }
+                }
+              }`,
+              { subjectId },
+            );
+
+      - name: Reply with outputs
+        if: ${{ steps.command.outputs.continue == 'true' }}
+        uses: actions/github-script@v7
+        env:
+          OUT_CONTEXT: ${{ steps.command.outputs.context }}
+          OUT_COMMAND: ${{ steps.command.outputs.command }}
+          OUT_NUMBER: ${{ steps.command.outputs.number }}
+          OUT_COMMENT_ID: ${{ steps.command.outputs.comment_id }}
+          OUT_ACTOR: ${{ steps.command.outputs.actor }}
+          OUT_PARAMS: ${{ steps.command.outputs.params }}
+        with:
+          script: |
+            const body = [
+              '### IssueOps command parsed :white_check_mark:',
+              '',
+              '| field | value |',
+              '| --- | --- |',
+              `| context | ${process.env.OUT_CONTEXT} |`,
+              `| command | ${process.env.OUT_COMMAND} |`,
+              `| number | ${process.env.OUT_NUMBER} |`,
+              `| comment_id | ${process.env.OUT_COMMENT_ID} |`,
+              `| actor | ${process.env.OUT_ACTOR} |`,
+              `| params | \`${process.env.OUT_PARAMS}\` |`,
+            ].join('\n');
+            const discussionId = context.payload.discussion.node_id;
+            await github.graphql(
+              `mutation($discussionId: ID!, $body: String!) {
+                addDiscussionComment(input: { discussionId: $discussionId, body: $body }) {
+                  comment { id }
+                }
+              }`,
+              { discussionId, body },
+            );
