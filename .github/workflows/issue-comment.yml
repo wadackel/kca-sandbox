@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - id: command
-        uses: knowledge-work/command-action@v2
+        uses: knowledge-work/command-action@v2.4.0
         with:
           command: 'test'
 
@@ -41,7 +41,7 @@ jobs:
 
       - name: Add eyes reaction
         if: ${{ steps.command.outputs.continue == 'true' }}
-        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        uses: actions/github-script@v7.1.0
         env:
           OUT_COMMENT_ID: ${{ steps.command.outputs.comment_id }}
         with:
@@ -55,7 +55,7 @@ jobs:
 
       - name: Reply with outputs
         if: ${{ steps.command.outputs.continue == 'true' }}
-        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        uses: actions/github-script@v7.1.0
         env:
           OUT_CONTEXT: ${{ steps.command.outputs.context }}
           OUT_COMMAND: ${{ steps.command.outputs.command }}
